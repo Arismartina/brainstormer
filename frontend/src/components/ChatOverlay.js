@@ -24,7 +24,7 @@ export default function ChatOverlay({ whiteboardRef }) {
         formData.append("image", imageBlob, "whiteboard.png");
       }
 
-      const response = await axios.post("http://localhost:5001/api/chat", formData, {
+      const response = await axios.post("http://localhost:5000/api/chat", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

@@ -1,29 +1,24 @@
 
-# .gitpod.yml for Brainstormer project
-
-image:
-  file: .gitpod.Dockerfile # Use a custom Dockerfile for system-level installs
-
-ports:
-  - port: 3000 # Frontend (React dev server)
-    onOpen: open-browser
-  - port: 5000 # Backend (Node.js Express server)
-    onOpen: ignore # Or 'notify', 'open-preview', 'open-browser'
-  - port: 11434 # Ollama API
-    onOpen: ignore # Ollama is usually accessed by backend internally
-
 tasks:
   - name: Backend & Ollama Setup
     init: |
-      # Install Node.js (if not in base image)
+      # Install Node.js
       curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-      sudo apt-get install -y nodejs
+      sudo apt-get update && sudo apt-get install -y nodejs
 
-      # Install Ollama
-      curl -fsSL https://ollama.com/install.sh | sh
+      # Find Ollama executable path and export it
+      # Gitpod's 'workspace-full' often provides Ollama via Nix, but its path
+      # needs to be found dynamically.
+      OLLAMA_BIN=$(find /nix/store -name ollama -type f -executable 2>/dev/null | head -n 1)
+      if [ -z "$OLLAMA_BIN" ]; then
+        echo "ERROR: Ollama executable not found after searching Nix store."
+        exit 1
+      fi
+      export OLLAMA_BIN
+      echo "Ollama executable found at: $OLLAMA_BIN"
 
-      # Pull bakllava model
-      /usr/local/bin/ollama pull bakllava
+      # Pull bakllava model using the found path
+      "$OLLAMA_BIN" pull bakllava
 
       # Navigate to backend and install dependencies
       cd backend
@@ -35,8 +30,9 @@ tasks:
       # Return to root for next task
       cd ..
     command: |
+      # The OLLAMA_BIN variable is exported from init to command context
       # Start Ollama server in background
-      nohup /usr/local/bin/ollama serve &
+      nohup "$OLLAMA_BIN" serve &
 
       # Start Backend server in background
       cd backend

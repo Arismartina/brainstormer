@@ -1,4 +1,18 @@
 
+
+    # .gitpod.yml for Brainstormer project
+
+image:
+  file: .gitpod.Dockerfile # Use a custom Dockerfile for system-level installs
+
+ports:
+  - port: 3000 # Frontend (React dev server)
+    onOpen: open-browser
+  - port: 5000 # Backend (Node.js Express server)
+    onOpen: ignore # Or 'notify', 'open-preview', 'open-browser'
+  - port: 11434 # Ollama API
+    onOpen: ignore # Ollama is usually accessed by backend internally
+
 tasks:
   - name: Backend & Ollama Setup
     init: |
@@ -7,22 +21,29 @@ tasks:
       sudo apt-get update && sudo apt-get install -y nodejs
 
       # Find Ollama executable path and export it
-      # Gitpod's 'workspace-full' often provides Ollama via Nix, but its path
-      # needs to be found dynamically.
       OLLAMA_BIN=$(find /nix/store -name ollama -type f -executable 2>/dev/null | head -n 1)
       if [ -z "$OLLAMA_BIN" ]; then
-        echo "ERROR: Ollama executable not found after searching Nix store."
+        echo "ERROR: Ollama executable not found after searching Nix store in init."
         exit 1
       fi
       export OLLAMA_BIN
-      echo "Ollama executable found at: $OLLAMA_BIN"
+      echo "Ollama executable found at: $OLLAMA_BIN in init."
 
-      # Pull bakllava model using the found path
-      "$OLLAMA_BIN" pull bakllava
+      # Pull bakllava model using the found path. Redirect output to a log file.
+      echo "Attempting to pull bakllava model..."
+      "$OLLAMA_BIN" pull bakllava > /workspace/brainstormer/ollama_pull_log.txt 2>&1
+      PULL_STATUS=$?
+      if [ $PULL_STATUS -ne 0 ]; then
+        echo "ERROR: Ollama pull failed. Check ollama_pull_log.txt for details."
+        cat /workspace/brainstormer/ollama_pull_log.txt # Display content on error
+        exit 1
+      fi
+      echo "Bakllava model pull completed. Check ollama_pull_log.txt for full output."
 
       # Navigate to backend and install dependencies
       cd backend
-      npm install
+      npm install > /workspace/brainstormer/npm_install_log.txt 2>&1
+      echo "Backend npm install completed. Check npm_install_log.txt for full output."
 
       # Fix index.js for bakllava model (using sed for automation)
       sed -i 's/model: "llava-llama3",/model: "bakllava",/' index.js
@@ -31,14 +52,18 @@ tasks:
       cd ..
     command: |
       # The OLLAMA_BIN variable is exported from init to command context
-      # Start Ollama server in background
-      nohup "$OLLAMA_BIN" serve &
+      # Start Ollama server in background, redirecting output to a dedicated log file
+      echo "Attempting to start Ollama server..."
+      nohup "$OLLAMA_BIN" serve > /workspace/brainstormer/ollama_serve_log.txt 2>&1 &
+      echo "Ollama server startup command issued. Check ollama_serve_log.txt for output."
 
-      # Start Backend server in background
+      # Start Backend server in background, redirecting output to a dedicated log file
       cd backend
-      nohup node index.js &
+      echo "Attempting to start Backend server..."
+      nohup node index.js > /workspace/brainstormer/backend_server_log.txt 2>&1 &
+      echo "Backend server startup command issued. Check backend_server_log.txt for output."
 
-      echo "Backend and Ollama started. Now starting Frontend..."
+      echo "Backend and Ollama startup commands issued. Now starting Frontend..."
 
   - name: Frontend Setup & Start
     init: |

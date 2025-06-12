@@ -1,1 +1,57 @@
 
+# .gitpod.yml for Brainstormer project
+
+image:
+  file: .gitpod.Dockerfile # Use a custom Dockerfile for system-level installs
+
+ports:
+  - port: 3000 # Frontend (React dev server)
+    onOpen: open-browser
+  - port: 5000 # Backend (Node.js Express server)
+    onOpen: ignore # Or 'notify', 'open-preview', 'open-browser'
+  - port: 11434 # Ollama API
+    onOpen: ignore # Ollama is usually accessed by backend internally
+
+tasks:
+  - name: Backend & Ollama Setup
+    init: |
+      # Install Node.js (if not in base image)
+      curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+
+      # Install Ollama
+      curl -fsSL https://ollama.com/install.sh | sh
+
+      # Pull bakllava model
+      /usr/local/bin/ollama pull bakllava
+
+      # Navigate to backend and install dependencies
+      cd backend
+      npm install
+
+      # Fix index.js for bakllava model (using sed for automation)
+      sed -i 's/model: "llava-llama3",/model: "bakllava",/' index.js
+
+      # Return to root for next task
+      cd ..
+    command: |
+      # Start Ollama server in background
+      nohup /usr/local/bin/ollama serve &
+
+      # Start Backend server in background
+      cd backend
+      nohup node index.js &
+
+      echo "Backend and Ollama started. Now starting Frontend..."
+
+  - name: Frontend Setup & Start
+    init: |
+      # Navigate to frontend and install dependencies
+      cd frontend
+      # Fix react-scripts in package.json (using sed for automation)
+      sed -i 's/"react-scripts": "^0.0.0"/"react-scripts": "5.0.1"/' package.json
+      npm install
+    command: |
+      # Start Frontend (npm start will typically expose port 3000)
+      cd frontend
+      npm start

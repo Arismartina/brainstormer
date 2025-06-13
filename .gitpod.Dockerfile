@@ -1,4 +1,4 @@
-# .gitpod.Dockerfile for Brainstormer project - Updated
+# gitpod.Dockerfile for Brainstormer project - updated
 FROM ghcr.io/gitpod-io/workspace-full-vnc:latest
 
 # Install Ollama

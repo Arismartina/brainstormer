@@ -1,6 +1,4 @@
-
-
-    # .gitpod.yml for Brainstormer project
+# .gitpod.yml for Brainstormer project
 
 image:
   file: .gitpod.Dockerfile # Use a custom Dockerfile for system-level installs
@@ -20,14 +18,15 @@ tasks:
       curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
       sudo apt-get update && sudo apt-get install -y nodejs
 
-      # Find Ollama executable path and export it
-      OLLAMA_BIN=$(find /nix/store -name ollama -type f -executable 2>/dev/null | head -n 1)
-      if [ -z "$OLLAMA_BIN" ]; then
-        echo "ERROR: Ollama executable not found after searching Nix store in init."
+      # Set Ollama executable path directly (since it's installed in Dockerfile)
+      export OLLAMA_BIN="/usr/local/bin/ollama"
+      echo "Ollama executable expected at: $OLLAMA_BIN"
+
+      # Verify Ollama is runnable (optional, but good for debugging)
+      if ! "$OLLAMA_BIN" --version; then
+        echo "ERROR: Ollama executable not found or not runnable at $OLLAMA_BIN."
         exit 1
       fi
-      export OLLAMA_BIN
-      echo "Ollama executable found at: $OLLAMA_BIN in init."
 
       # Pull bakllava model using the found path. Redirect output to a log file.
       echo "Attempting to pull bakllava model..."

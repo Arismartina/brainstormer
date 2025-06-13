@@ -1,43 +1,9 @@
-# .gitpod.yml for Brainstormer project
-
-image:
-  file: .gitpod.Dockerfile # Use a custom Dockerfile for system-level installs
-
-ports:
-  - port: 3000 # Frontend (React dev server)
-    onOpen: open-browser
-  - port: 5000 # Backend (Node.js Express server)
-    onOpen: ignore # Or 'notify', 'open-preview', 'open-browser'
-  - port: 11434 # Ollama API
-    onOpen: ignore # Ollama is usually accessed by backend internally
-
 tasks:
   - name: Backend & Ollama Setup
     init: |
       # Install Node.js
       curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
       sudo apt-get update && sudo apt-get install -y nodejs
-
-      # Set Ollama executable path directly (since it's installed in Dockerfile)
-      export OLLAMA_BIN="/usr/local/bin/ollama"
-      echo "Ollama executable expected at: $OLLAMA_BIN"
-
-      # Verify Ollama is runnable (optional, but good for debugging)
-      if ! "$OLLAMA_BIN" --version; then
-        echo "ERROR: Ollama executable not found or not runnable at $OLLAMA_BIN."
-        exit 1
-      fi
-
-      # Pull bakllava model using the found path. Redirect output to a log file.
-      echo "Attempting to pull bakllava model..."
-      "$OLLAMA_BIN" pull bakllava > /workspace/brainstormer/ollama_pull_log.txt 2>&1
-      PULL_STATUS=$?
-      if [ $PULL_STATUS -ne 0 ]; then
-        echo "ERROR: Ollama pull failed. Check ollama_pull_log.txt for details."
-        cat /workspace/brainstormer/ollama_pull_log.txt # Display content on error
-        exit 1
-      fi
-      echo "Bakllava model pull completed. Check ollama_pull_log.txt for full output."
 
       # Navigate to backend and install dependencies
       cd backend
@@ -50,10 +16,13 @@ tasks:
       # Return to root for next task
       cd ..
     command: |
-      # The OLLAMA_BIN variable is exported from init to command context
       # Start Ollama server in background, redirecting output to a dedicated log file
+      # (Ollama will need to be installed/pulled manually first)
       echo "Attempting to start Ollama server..."
-      nohup "$OLLAMA_BIN" serve > /workspace/brainstormer/ollama_serve_log.txt 2>&1 &
+      # Assuming ollama is in PATH or specify /usr/local/bin/ollama if manually installed there
+      # Using a generic 'ollama' here, as it might be in PATH after manual install.
+      # If not, you'll use the specific path from manual installation.
+      nohup ollama serve > /workspace/brainstormer/ollama_serve_log.txt 2>&1 &
       echo "Ollama server startup command issued. Check ollama_serve_log.txt for output."
 
       # Start Backend server in background, redirecting output to a dedicated log file
@@ -63,15 +32,3 @@ tasks:
       echo "Backend server startup command issued. Check backend_server_log.txt for output."
 
       echo "Backend and Ollama startup commands issued. Now starting Frontend..."
-
-  - name: Frontend Setup & Start
-    init: |
-      # Navigate to frontend and install dependencies
-      cd frontend
-      # Fix react-scripts in package.json (using sed for automation)
-      sed -i 's/"react-scripts": "^0.0.0"/"react-scripts": "5.0.1"/' package.json
-      npm install
-    command: |
-      # Start Frontend (npm start will typically expose port 3000)
-      cd frontend
-      npm start

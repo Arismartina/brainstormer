@@ -1,8 +1,5 @@
 # .gitpod.Dockerfile for Brainstormer project - Updated
-# .gitpod.Dockerfile for Brainstormer project - Updated
-FROM ghcr.io/gitpod-io/workspace-full-vnc:latest # Example base image - yours might be different
-
-# ... (any other existing lines in your Dockerfile, e.g., for system packages) ...
+FROM ghcr.io/gitpod-io/workspace-full-vnc:latest
 
 # Install Ollama
 USER root
